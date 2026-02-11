@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import "@heroui/styles"; 
+
+
+
+
+
+/* Customize DayPilot to feel modern / HeroUI v3 */
+.dp-default .dp-event {
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.dp-default .dp-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.dp-default .dp-header {
+  background: hsl(var(--background));
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.dp-default .dp-cell {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}
+
+/* Today highlight */
+.dp-default .dp-today {
+  background: hsl(var(--primary)/0.1);
+}
+
+.ant-notification-notice {
+  overflow: hidden;
+}
+
+.ant-notification-notice-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.custom-ant-table .ant-table-thead > tr > th {
+  background: #f8fafc;
+  color: #1e293b;
+  font-weight: 400;
+  padding: 10px 16px !important;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.custom-ant-table .ant-table-tbody > tr > td {
+  padding: 4px 10px !important;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.custom-ant-table .ant-pagination {
+  margin: 24px 0 !important;
+}
+
+.custom-ant-table .ant-pagination-item-active {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+}
+
+.custom-ant-table .ant-pagination-item-active a {
+  color: white !important;
+}
+
