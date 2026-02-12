@@ -31,8 +31,8 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className={`h-screen bg-content1 border-r border-divider transition-[width] duration-300 ease-in-out flex flex-col pl-4 relative ${isOpen ? "w-50" : "w-15"}`}
-      style={{ backgroundColor: '#FFFFFF' }}
+      className={`h-screen bg-primary-soft  transition-[width] duration-300 ease-in-out flex flex-col pl-4 relative shadow-xl ${isOpen ? "w-50" : "w-15"}`}
+      
     >
       {/* Toggle button */}
       <Button 
@@ -73,9 +73,8 @@ export default function Sidebar() {
           {menuItems2.map((item) => (
             <Button 
               key={item.path}
-              variant="soft"
-              style={{ backgroundColor: '#FCA426' }}
-              className="flex items-center gap-0 w-[170px] justify-start h-10 border overflow-hidden"
+            
+              className="flex items-center gap-0 w-[170px] justify-start h-10 border overflow-hidden bg-warning-soft text-gray-900"
               size="sm"
               onClick={handleLogout}
             >
