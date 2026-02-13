@@ -56,7 +56,7 @@ const [hasAccepted, setHasAccepted] = useState(false);
   
     refreshData();
   }, [refetchShipments]);
-console.log("confirmedDate",confirmedDate)
+
   const [tempDateTime, setTempDateTime] = useState("");
  
   const [selectedDate, setSelectedDate] = useState(null);
@@ -81,7 +81,7 @@ console.log("confirmedDate",confirmedDate)
   const [dateRange, setDateRange] = useState(null); // [startDate, endDate] or null
   const handleRowClick = (shipmenti) => {
     setSelectedDate(shipmenti);
-    console.log("record",shipmenti)
+   
 
    
     if (triggerRef.current) {
@@ -683,7 +683,7 @@ console.log("confirmedDate",confirmedDate)
         result = { message: "Success (no JSON)" };
       }
 
-      console.log("Suggest success:", result);
+     
 
       // Show nice toast
       notification.success({
@@ -735,8 +735,7 @@ console.log("confirmedDate",confirmedDate)
       id: selectedDate._id
     };
 
-    console.log("Accept payload:", payload);
-
+  
     setIsAccepting(true);
 
     try {
@@ -767,7 +766,7 @@ console.log("confirmedDate",confirmedDate)
         result = { message: "Accepted (empty response body)" };
       }
 
-      console.log("Accept success:", result);
+
       refetchShipments()
       // Success toast
       notification.success({

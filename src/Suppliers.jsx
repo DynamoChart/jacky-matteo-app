@@ -32,7 +32,7 @@ export default function Suppliers() {
   } = useAppContext();
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-console.log("allSuppliers",allSuppliers)
+
   useEffect(() => {
     const refreshData = async () => {
       setIsInitialLoading(true);

@@ -93,6 +93,7 @@ export default function Dashboard() {
     else setCurrentDate(addDays(currentDate, 1));
   };
 
+
   const goToday = () => setCurrentDate(new Date());
 
   const title = {
@@ -116,7 +117,7 @@ const updateDeliveryDate = async (shipmentId, newIsoDate) => {
 
   // 2. Optimistic update – move immediately
   optimisticUpdateShipment(shipmentId, newIsoDate);
-
+console.log("newIsoDate",newIsoDate)
   try {
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/shipment/update-delivery-date`, {
       method: "POST",
@@ -139,7 +140,7 @@ const updateDeliveryDate = async (shipmentId, newIsoDate) => {
     await refetchShipments();
 
     notification.success({
-      message: "Success",
+      title: "Success",
       description: "Delivery date has been updated.",
       placement: "topRight",
       duration: 4.5,
@@ -436,7 +437,7 @@ const updateDeliveryDate = async (shipmentId, newIsoDate) => {
 
             {view === "day" && (
               <DailyCalendar
-                day={days[0]}
+               day={currentDate}
                 shipments={shipments}
                 canDrag={canDrag}
                 onUpdate={updateDeliveryDate}

@@ -13,7 +13,7 @@ export default function Sidebar() {
 
   const menuItems = [
     { icon: <CircleGauge size={22} />, label: "Dashboard", path: "/" },
-    { icon: <PackageSearch size={22} />, label: "Counter_Requests", path: "/counter-requests" }, // added icon suggestion, change if you want
+    { icon: <PackageSearch size={22} />, label: "Counter Requests", path: "/counter-requests" }, // added icon suggestion, change if you want
     { icon: <Truck size={22} />, label: "Shipments", path: "/shipments" },
     { icon: <Users size={22} />, label: "Users", path: "/users" },
     { icon: <Building2 size={22} />, label: "Suppliers", path: "/suppliers" },

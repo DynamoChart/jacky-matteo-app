@@ -221,7 +221,7 @@ export function AppProvider({ children }) {
       }
     }, [token]);
 
-  console.log("allUsers",allUsers)
+
 
   // ── Sequence fetches: user → then others ───────────────
   useEffect(() => {
@@ -246,7 +246,7 @@ export function AppProvider({ children }) {
       fetchAllLocations();
     }
   }, [currentUser, userLoading, fetchShipments, fetchAllUsers]);
-console.log("shipments",shipments)
+
   // ── Auth actions ───────────────────────────────────────
   const login = (newToken, userData = null) => {
     localStorage.setItem('token', newToken);
