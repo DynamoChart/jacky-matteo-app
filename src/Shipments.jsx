@@ -18,6 +18,7 @@ import { Loader2 } from "lucide-react"; // nice spinning loader icon
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { Modal, Button, Chip, Card, Input } from "@heroui/react";
 import { notification } from "antd";
+import { FileText, ExternalLink } from "lucide-react";   // ← add these
 import "antd/dist/antd.css";
 import {
   Truck,
@@ -304,6 +305,36 @@ if (statusFilter.length > 0) {
           {record.items?.reduce((sum, item) => sum + (item.actual_quantity || 0), 0) || 0}
         </div>
       ),
+    },
+    {
+      title: "Attachment",
+      key: "attachment",
+      width: 60,
+      maxWidth: 80,
+      align: "center",
+      render: (_, record) => {
+        if (!record.attachments?.length) return null;
+    
+        const dbPath = record.attachments[0];                        // "serve/uploads/1771024027116.pdf"
+        
+        // Remove "serve/" prefix if present, keep the rest
+        const publicPath = dbPath.replace(/^serve\//, '');           // → "uploads/1771024027116.pdf"
+        
+        // Make sure no leading slash duplication
+        const cleanPath = publicPath.replace(/^\//, '');
+        
+        const fullUrl = `${import.meta.env.VITE_API_BASE_URL}${cleanPath}`;
+    
+        return (
+          <Tooltip title="Open attachment">
+            <AntButton
+              type="text"
+              icon={<FileText className="h-5 w-5 text-indigo-600 hover:text-indigo-800 transition-colors" />}
+              onClick={() => window.open(fullUrl, "_blank", "noopener,noreferrer")}
+            />
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Actions",

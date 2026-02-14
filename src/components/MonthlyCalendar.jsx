@@ -28,7 +28,7 @@ export default function MonthlyCalendar({
   return (
     <div className="grid grid-cols-7 gap-px  overflow-hidden shadow-sm border border-gray-200/70">
       {/* Weekday headers */}
-      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+      {["Sun","Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
         <div
           key={day}
           className="bg-[#F9C97C] backdrop-blur-sm py-1.5 text-center text-xs font-semibold tracking-wide text-black uppercase"

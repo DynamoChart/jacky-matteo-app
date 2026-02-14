@@ -7,7 +7,7 @@ import { Button, Chip,Modal,Card } from "@heroui/react";
 import DashTable from "./components/DashTable";
 import KpiDashboard from "./components/KpiDashboard";
 import { CalendarDays, Package } from "lucide-react";
-
+import { GridView } from "./components/GridView";
 import {
   format,
   startOfMonth,
@@ -235,6 +235,18 @@ console.log("newIsoDate",newIsoDate)
                 >
                   Day
                 </Button>
+
+
+
+                <GridView/>
+
+
+
+
+
+
+
+
               </div>
             </div>
           </div>

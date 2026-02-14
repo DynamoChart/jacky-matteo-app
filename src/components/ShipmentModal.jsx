@@ -2,9 +2,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Modal, Button, Form, Input, Select, DatePicker, Table, Space, Popconfirm } from "antd";
+import { Modal, Button, Form, Input, Select, DatePicker, Table, Space, Popconfirm, Checkbox} from "antd";
 import { Check, Plus, PencilToSquare, TrashBin } from "@gravity-ui/icons";
 import { useAppContext } from "../context/DataContext";
+import { Upload } from "antd";
+import { InboxOutlined } from "@ant-design/icons";   // nice drag icon
 import dayjs from "dayjs";
 import { Collapse } from "antd";
 const { Panel } = Collapse;
@@ -24,13 +26,16 @@ export default function ShipmentModal({
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const [form] = Form.useForm();
-
+  const [attachments, setAttachments] = useState([]);     // will hold [{ name, path }]
+  const [uploading, setUploading] = useState(false);
   // Initial values for form
   const initialValues = {
     supplier: null,
     location: null,
     delivery_date: null,
     tracking_number: "",
+
+  missed_delivery: false,      // ← add
     courier: "",
     items: [
       {
@@ -60,6 +65,8 @@ export default function ShipmentModal({
       delivery_date: shipment.delivery_date ? dayjs(shipment.delivery_date) : null,
       tracking_number: shipment.tracking_number || "",
       courier: shipment.courier || "",
+      status: shipment.status || "Scheduled",              // ← add
+      missed_delivery: shipment.missed_delivery || false, // ← add
       items: shipment.items?.length > 0
         ? shipment.items.map(item => ({
             ...item,
@@ -68,7 +75,12 @@ export default function ShipmentModal({
         : initialValues.items,
     });
   }, [shipment, isEdit, form]);
-
+  useEffect(() => {
+    if (!visible) {
+      setAttachments([]);
+      form.resetFields();
+    }
+  }, [visible, form]);
   const handleSubmit = async () => {
     try {
       setLoading(true);
@@ -82,6 +94,14 @@ export default function ShipmentModal({
           delivery_date: values.delivery_date ? dayjs(values.delivery_date).toISOString() : undefined,
           tracking_number: values.tracking_number?.trim() || undefined,
           courier: values.courier?.trim() || undefined,
+          ...(isEdit && {
+            status: values.status || undefined,
+            missed_delivery: values.missed_delivery ?? undefined,
+          }),
+          // ← ADD THIS for create only
+          ...(mode === "create" && {
+            attachments: attachments.map((f) => f.path), // ["uploads/xxx.pdf"]
+          }),
           items: values.items
             .filter(item => item.po || item.description)
             .map(item => ({
@@ -153,7 +173,7 @@ setVisible(false);         // ← close modal immediately
 
       <Modal
         title={
-          <div className="flex items-center gap-3 ">
+          <div className="flex items-center gap-1 ">
             {mode === "create" && <Plus />}
             {mode === "edit" && <PencilToSquare />}
             {mode === "delete" && <TrashBin />}
@@ -167,8 +187,9 @@ setVisible(false);         // ← close modal immediately
         open={visible}
         onCancel={() => setVisible(false)}
         footer={null}
-        width={mode === "delete"?500:800}
+        width={mode === "delete"?500:650}
         destroyOnClose
+        style={{ top: 20 }}
       
       >
         {isDelete ? (
@@ -247,27 +268,89 @@ setVisible(false);         // ← close modal immediately
   rules={[{ required: true, message: "Delivery date and time is required" }]}
 >
   <DatePicker
-    showTime={{ format: "HH:mm:ss" }}          // ← enables time picker with seconds
-    format="YYYY-MM-DD HH:mm:ss"               // ← display format
+    showTime={{ format: "HH:mm:ss" }}
+    format="YYYY-MM-DD HH:mm:ss"
     placeholder="Select date and time"
     style={{ width: "100%" }}
+    
+    // 1. No past dates allowed
     disabledDate={(current) => current && current < dayjs().startOf("day")}
+    
+    // 2. Time restrictions: 06:30 – 22:00 + today's past time protection
     disabledTime={(current) => {
-      // Optional: disable past times on today's date
-      if (current && current.isSame(dayjs(), "day")) {
+      // If no date is selected yet → allow all for smooth UX
+      if (!current) {
         return {
-          disabledHours: () => Array.from({ length: dayjs().hour() }, (_, i) => i),
-          disabledMinutes: (hour) =>
-            hour === dayjs().hour()
-              ? Array.from({ length: dayjs().minute() }, (_, i) => i)
-              : [],
-          disabledSeconds: (hour, minute) =>
-            hour === dayjs().hour() && minute === dayjs().minute()
-              ? Array.from({ length: dayjs().second() }, (_, i) => i)
-              : [],
+          disabledHours: () => [],
+          disabledMinutes: () => [],
+          disabledSeconds: () => [],
         };
       }
-      return {};
+
+      const now = dayjs();
+      const isToday = current.isSame(now, "day");
+
+      // Current real time values (computed once)
+      const nowHour = now.hour();
+      const nowMinute = now.minute();
+      const nowSecond = now.second();
+
+      return {
+        // Always disable hours 00–05 and 23
+        disabledHours: () => {
+          const alwaysDisabled = [
+            ...Array.from({ length: 6 }, (_, i) => i),     // 00–05
+            23,                                            // 23
+          ];
+
+          if (isToday) {
+            // On today: also disable hours before current hour
+            return [...alwaysDisabled, ...Array.from({ length: nowHour }, (_, i) => i)];
+          }
+
+          return alwaysDisabled;
+        },
+
+        // Minutes restriction
+        disabledMinutes: (selectedHour) => {
+          let disabledMins = [];
+
+          // 06:xx → disable 00–29 minutes
+          if (selectedHour === 6) {
+            disabledMins = Array.from({ length: 30 }, (_, i) => i);
+          }
+
+          // 22:xx → disable 01–59 minutes (only :00 allowed)
+          if (selectedHour === 22) {
+            disabledMins = Array.from({ length: 59 }, (_, i) => i + 1);
+          }
+
+          // Today + current hour selected → disable past minutes
+          if (isToday && selectedHour === nowHour) {
+            // Merge with existing restrictions (use Set to avoid duplicates)
+            disabledMins = [
+              ...new Set([
+                ...disabledMins,
+                ...Array.from({ length: nowMinute }, (_, i) => i),
+              ]),
+            ];
+          }
+
+          return disabledMins;
+        },
+
+        // Seconds restriction (only relevant if current minute is selected today)
+        disabledSeconds: (selectedHour, selectedMinute) => {
+          if (
+            isToday &&
+            selectedHour === nowHour &&
+            selectedMinute === nowMinute
+          ) {
+            return Array.from({ length: nowSecond }, (_, i) => i);
+          }
+          return [];
+        },
+      };
     }}
   />
 </Form.Item>
@@ -373,7 +456,102 @@ setVisible(false);         // ← close modal immediately
     )}
   </Form.List>
 </div>
-          
+{isEdit && (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <Form.Item
+      name="status"
+      label="Status"
+      // no required rule → backend + role decides if it's mandatory
+    >
+      <Select placeholder="Select status">
+        <Option value="Received">Received</Option>
+        <Option value="Not Received">Not Received</Option>
+        <Option value="Delay">Delay</Option>
+        <Option value="TBD">TBD</Option>
+   
+      </Select>
+    </Form.Item>
+
+    <Form.Item
+      name="missed_delivery"
+      label=" "
+      valuePropName="checked"
+    >
+      <Checkbox className="mt-8">
+        Missed Delivery
+      </Checkbox>
+    </Form.Item>
+  </div>
+)}
+{mode === "create" && (
+  <div className="mt-6">
+    <h4 className="text-lg font-semibold mb-2">Attachment (optional)</h4>
+    <Upload.Dragger
+      name="attachment"
+      multiple={false}                    // change to true if you want multiple later
+      showUploadList={true}
+      maxCount={1}                        // optional - limit to 1 file
+      customRequest={async ({ file, onSuccess, onError }) => {
+        try {
+          setUploading(true);
+          const formData = new FormData();
+          formData.append("attachment", file);
+
+          const res = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL}/api/shipment/attachment`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                // Do NOT set Content-Type — browser sets multipart with boundary
+              },
+              body: formData,
+            }
+          );
+
+          if (!res.ok) {
+            const err = await res.text();
+            throw new Error(err || "Upload failed");
+          }
+
+          const data = await res.json(); // { filename: "uploads/xxx.pdf" }
+          const uploadedFile = {
+            name: file.name,
+            path: data.filename,
+          };
+
+          setAttachments([uploadedFile]); // or .push() if multiple=true
+          onSuccess("ok");
+          notification.success({
+            message: "File uploaded",
+            description: file.name,
+          });
+        } catch (err) {
+          console.error(err);
+          onError(err);
+          notification.error({
+            message: "Upload failed",
+            description: err.message,
+          });
+        } finally {
+          setUploading(false);
+        }
+      }}
+      onRemove={() => {
+        setAttachments([]);
+        return true;
+      }}
+    >
+      <p className="ant-upload-drag-icon">
+        <InboxOutlined />
+      </p>
+      <p className="ant-upload-text">Click or drag file to this area to upload</p>
+      <p className="ant-upload-hint">
+        Support for single file upload (PDF, images, docs, etc.)
+      </p>
+    </Upload.Dragger>
+  </div>
+)}
 
             {/* Submit buttons */}
             <div className="flex justify-end gap-4 mt-10">
@@ -382,8 +560,9 @@ setVisible(false);         // ← close modal immediately
               </Button>
               <Button
                 type="primary"
-                loading={loading}
+                loading={loading || uploading}
                 onClick={handleSubmit}
+                disabled={uploading}
               >
                 {isEdit ? "Update Shipment" : "Create Shipment"}
               </Button>
