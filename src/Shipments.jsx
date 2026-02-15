@@ -19,6 +19,7 @@ import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-f
 import { Modal, Button, Chip, Card, Input } from "@heroui/react";
 import { notification } from "antd";
 import { FileText, ExternalLink } from "lucide-react";   // ← add these
+
 import "antd/dist/antd.css";
 import {
   Truck,
@@ -33,6 +34,7 @@ import ShipmentModal from "./components/ShipmentModal";
 import {Envelope, Globe, LayoutHeaderCellsLarge,TrashBin,Plus} from "@gravity-ui/icons";
 import * as XLSX from "xlsx";
 import LoadingStates from "./components/LoadingStates";
+import BulkUpload from "./components/BulkUpload";
 const { RangePicker } = DatePicker;
 
 export default function Shipments() {
@@ -402,6 +404,7 @@ if (statusFilter.length > 0) {
               <LayoutHeaderCellsLarge/>
               Export Excel
             </Button>
+            <BulkUpload/>
           </Space>
         </div>
 <div className="flex justify-between">

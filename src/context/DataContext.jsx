@@ -246,7 +246,7 @@ export function AppProvider({ children }) {
       fetchAllLocations();
     }
   }, [currentUser, userLoading, fetchShipments, fetchAllUsers]);
-
+console.log("currentUser",currentUser)
   // ── Auth actions ───────────────────────────────────────
   const login = (newToken, userData = null) => {
     localStorage.setItem('token', newToken);

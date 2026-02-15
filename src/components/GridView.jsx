@@ -105,9 +105,9 @@ export function GridView() {
                           className={`w-full max-w-md p-1 ${colors.bg} ${colors.border} shadow-md rounded-xl overflow-hidden`}
                         >
                           <Card.Header className="pb-2 mt-3 px-5 pt-2">
-                            <Card.Title className={`${colors.text} text-base flex font-semibold items-center gap-2`}>
+                            <Card.Title className={`${colors.text} text-lg flex font-semibold items-center gap-2`}>
                               <Package className={`${colors.time} size-5`} />
-                              {shipment.tracking_number || "—"}  / ID: {shipment.shortId || "—"}  Time: {deliveryTime}
+                              {shipment.tracking_number || "—"}  / ID: {shipment.shortId || "—"} / Time: {deliveryTime}
                               {shipment.missed_delivery && (
                                 <span className="text-red-200 text-xs ml-1">Missed</span>
                               )}
