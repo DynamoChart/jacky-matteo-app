@@ -46,7 +46,7 @@ export default function Sidebar() {
       </Button>
 
       <div className="flex items-center justify-center mr-6">
-        <img src={logodd} alt="picof" className={`${isOpen ? "w-30 h-10 mt-4":"w-0 h-10 mt-4"}`} />
+        <img src={logodd} alt="picof" className={`${isOpen ? "w-35 h-10 mt-4":"w-0 h-10 mt-4"}`} />
       </div>
 
       {/* Menu items */}
