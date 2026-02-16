@@ -38,7 +38,7 @@ import BulkUpload from "./components/BulkUpload";
 const { RangePicker } = DatePicker;
 
 export default function Shipments() {
-  const { shipments, shipmentsLoading, shipmentsError,refetchShipments } = useAppContext();
+  const { shipments, shipmentsLoading, shipmentsError,refetchShipments,currentUser } = useAppContext();
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState([
@@ -351,15 +351,26 @@ if (statusFilter.length > 0) {
               editRef.current?.click();
             }}
           />
-          <AntButton
-            type="text"
-            danger
-            icon={<Trash2 className="h-4 w-4" />}
-            onClick={() => {
-              setSelectedShipment(record);
-              deleteRef.current?.click();
-            }}
-          />
+    
+          {currentUser?.role === "admin" ? (
+            <AntButton
+              type="text"
+              danger
+              icon={<Trash2 className="h-4 w-4" />}
+              onClick={() => {
+                setSelectedShipment(record);
+                deleteRef.current?.click();
+              }}
+            />
+          ) : (
+            <Tooltip title="Delete available to admins only">
+              <AntButton
+                type="text"
+                disabled
+                icon={<Trash2 className="h-4 w-4 text-gray-400" />}
+              />
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -380,7 +391,7 @@ if (statusFilter.length > 0) {
     <div className="bg-white min-h-screen py-8">
       <div className=" mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Header + Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+       {currentUser?.role==!"location" &&  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
             <Truck className="h-7 w-7 text-indigo-600" />
             Shipments
@@ -406,7 +417,7 @@ if (statusFilter.length > 0) {
             </Button>
             <BulkUpload/>
           </Space>
-        </div>
+        </div>}
 <div className="flex justify-between">
         {/* Status chips with checkboxes */}
         <Space wrap size="middle">

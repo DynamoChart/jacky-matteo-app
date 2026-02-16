@@ -27,7 +27,7 @@ const { RangePicker } = DatePicker;
 import { notification } from "antd";
 import "antd/dist/antd.css";
 export default function Counter() {
-  const { shipments, shipmentsLoading, shipmentsError,token,refetchShipments } = useAppContext();
+  const { shipments, shipmentsLoading, shipmentsError,token,refetchShipments,currentUser} = useAppContext();
   const triggerRef = useRef(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState([
@@ -603,7 +603,7 @@ const [hasAccepted, setHasAccepted] = useState(false);
 </Modal.Body>
 <ModalFooter className="flex items-center justify-end gap-3 pt-5 border-t">
 
-  {selectedDate?.cr_status?.toLowerCase() !== "done" && (
+{!(selectedDate?.cr_status?.toLowerCase() === "done" && currentUser?.role === "supplier") && (
     <>
       <div className="flex items-center gap-2">
      

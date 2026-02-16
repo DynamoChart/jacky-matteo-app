@@ -21,7 +21,7 @@ export default function ShipmentModal({
 }) {
   const isDelete = mode === "delete";
   const isEdit = mode === "edit";
-  const { allSuppliers, allLocations, token,refetchShipments } = useAppContext();
+  const { allSuppliers, allLocations, token,refetchShipments,currentUser } = useAppContext();
 
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -221,7 +221,7 @@ setVisible(false);         // ← close modal immediately
           >
             {/* Supplier & Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Form.Item
+              {currentUser?.role==!"supplier" && <Form.Item
                 name="supplier"
                 label="Supplier"
                 rules={[{ required: true, message: "Please select supplier" }]}
@@ -236,9 +236,12 @@ setVisible(false);         // ← close modal immediately
                     <Option key={sup._id} value={sup._id} label={sup.name}>
                       {sup.name}
                     </Option>
+                    
                   ))}
+       
                 </Select>
-              </Form.Item>
+                
+              </Form.Item>}
 
               <Form.Item
                 name="location"
@@ -255,7 +258,9 @@ setVisible(false);         // ← close modal immediately
                     <Option key={loc._id} value={loc._id} label={loc.name}>
                       {loc.name}
                     </Option>
+                    
                   ))}
+                        
                 </Select>
               </Form.Item>
             </div>

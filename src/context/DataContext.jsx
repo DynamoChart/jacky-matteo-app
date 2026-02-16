@@ -236,17 +236,26 @@ export function AppProvider({ children }) {
   // 3. Fetch secondary data AFTER currentUser is known
   useEffect(() => {
     if (!currentUser || userLoading) return;
-
+  
     fetchShipments();
-
-    // Only admins should try to load the full user list
+  
+    // Admins get everything
     if (currentUser.role === 'admin') {
       fetchAllUsers();
       fetchAllSuppliers();
       fetchAllLocations();
     }
+  
+    // Suppliers also need locations (and possibly their own supplier data)
+    if (currentUser.role === 'supplier' || currentUser.role === 'admin') {
+      fetchAllLocations();
+      // Optional: suppliers might already know their own supplier via currentUser.supplier
+      // but if they need the full list → also call fetchAllSuppliers()
+      // fetchAllSuppliers();
+    }
   }, [currentUser, userLoading, fetchShipments, fetchAllUsers]);
 console.log("currentUser",currentUser)
+console.log("allLocations",currentUser)
   // ── Auth actions ───────────────────────────────────────
   const login = (newToken, userData = null) => {
     localStorage.setItem('token', newToken);

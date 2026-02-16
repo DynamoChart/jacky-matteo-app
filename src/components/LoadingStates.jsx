@@ -2,9 +2,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle,Package } from "lucide-react";
 import { Button, Card } from "@heroui/react";
-
+import { CalendarDays } from "lucide-react";
 export default function LoadingStates({
   isInitialLoading,
   shipmentsLoading,
@@ -93,15 +93,17 @@ export default function LoadingStates({
           {emptyIcon || <Package className="h-16 w-16 text-gray-400 mx-auto mb-6" />}
           <h3 className="text-2xl font-bold text-gray-800 mb-3">{emptyTitle}</h3>
           <p className="text-gray-500 mb-8">{emptyDescription}</p>
+          <div className="flex w-full text-center ml-[35%] ">
           {addRef && (
             <Button
               variant="primary"
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-indigo-600 hover:bg-indigo-700 shadow-xl"
               onClick={() => addRef.current?.click()}
             >
               Add First Request
             </Button>
           )}
+          </div>
         </Card>
       </motion.div>
     );

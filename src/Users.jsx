@@ -164,7 +164,7 @@ const filteredUsers = useMemo(() => {
         let color = "default";
         if (role === "admin") color = "success";
         if (role === "supplier") color = "warning";
-        if (role === "location") color = "processing";
+        if (role === "location") color = "accent";
 
         return (
           <Chip variant="soft" color={color} size="sm">
