@@ -1,12 +1,52 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Calendar } from "@gravity-ui/icons";
 import { Button, Modal, Card } from "@heroui/react";
 import { useAppContext } from "../context/DataContext";
 import { format, parseISO } from "date-fns";
-import { CalendarDays, Package } from "lucide-react";
+import { CalendarDays, Package, RefreshCw } from "lucide-react";
+import { notification } from "antd";
+
 export function GridView() {
-  const { shipments } = useAppContext();
+  const { shipments, refetchShipments } = useAppContext();
+
+  const [countdown, setCountdown] = useState(5 * 60); // 5 minutes in seconds
+
+  // Countdown timer logic
+  useEffect(() => {
+    if (countdown <= 0) {
+      // Time's up → refresh data and restart
+      refetchShipments?.();
+      notification.info({
+        message: "Data Refreshed",
+        description: "Shipments updated. Countdown restarting...",
+        placement: "topRight",
+        duration: 4,
+      });
+
+      // Soft reload page (keeps state clean)
+      window.location.reload();
+
+      // Alternatively (if you prefer no full reload):
+      // setCountdown(5 * 60); // just restart timer
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [countdown, refetchShipments]);
+
+  // Format countdown as MM:SS
+  const minutes = Math.floor(countdown / 60);
+  const seconds = countdown % 60;
+  const timeDisplay = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+  // Progress ring (0–100%)
+  const progress = (countdown / (5 * 60)) * 100;
 
   // Get today's date string in yyyy-MM-dd format for filtering
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -26,8 +66,11 @@ export function GridView() {
   const todayDisplay = format(new Date(), "EEEE, MMMM d, yyyy");
 
   return (
-    <div className="flex flex-wrap gap-4">
-      <Modal>
+    <div className="flex flex-wrap gap-4 relative">
+      {/* Countdown Timer – top-right corner */}
+  
+
+      <Modal isDismissable={false}>
         <Button variant="secondary">Grid</Button>
 
         <Modal.Backdrop>
@@ -36,17 +79,29 @@ export function GridView() {
               <Modal.CloseTrigger />
 
               <Modal.Header>
-                <div className="flex items-center gap-3">
-                  <Modal.Icon className="bg-success-soft text-foreground">
-                    <Calendar className="size-5" />
-                  </Modal.Icon>
-                  <Modal.Heading className="text-xl font-semibold">
-                    {todayDisplay}
-                  </Modal.Heading>
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-3">
+                    <Modal.Icon className="bg-success-soft text-foreground">
+                      <Calendar className="size-5" />
+                    </Modal.Icon>
+                    <Modal.Heading className="text-xl font-semibold">
+                      {todayDisplay}
+                    </Modal.Heading>
+                  </div>
+
+                  {/* Small countdown in header too (optional) */}
+                  <div className="text-sm text-gray-500 flex items-center gap-1.5 mr-6 -mt-8" >
+                    <RefreshCw size={14} />
+                    Next refresh: {timeDisplay}
+                  </div>
                 </div>
               </Modal.Header>
 
               <Modal.Body>
+
+
+      
+  
                 {dayShipments.length === 0 ? (
                   <p className="text-center text-gray-500 py-12 text-lg">
                     No shipments scheduled for today.
@@ -107,11 +162,10 @@ export function GridView() {
                           <Card.Header className="pb-2 mt-3 px-5 pt-2">
                             <Card.Title className={`${colors.text} text-lg flex font-semibold items-center gap-2`}>
                               <Package className={`${colors.time} size-5`} />
-                              {shipment.tracking_number || "—"}  / ID: {shipment.shortId || "—"} / Time: {deliveryTime}
+                              {shipment.tracking_number || "—"} / ID: {shipment.shortId || "—"} / Time: {deliveryTime}
                               {shipment.missed_delivery && (
                                 <span className="text-red-200 text-xs ml-1">Missed</span>
                               )}
-                                 
                             </Card.Title>
                           </Card.Header>
 
@@ -128,12 +182,9 @@ export function GridView() {
                                 <span className={`${colors.time} font-medium`}>Status:</span>
                                 <p className={`${colors.text} font-medium`}>{status}</p>
                               </div>
-
-             
                             </div>
 
                             <div className="pt-2">
-
                               <div className="mt-1 space-y-1">
                                 {shipment.items?.length > 0 ? (
                                   shipment.items.map((item, i) => (
@@ -149,8 +200,6 @@ export function GridView() {
                               </div>
                             </div>
                           </div>
-
-                    
                         </Card>
                       );
                     })}

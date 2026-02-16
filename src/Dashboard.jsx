@@ -27,7 +27,7 @@ import { notification } from "antd";
 import "antd/dist/antd.css";
 
 export default function Dashboard() {
-  const { shipments, shipmentsLoading,optimisticUpdateShipment, shipmentsError, token, user, refetchShipments } =
+  const { shipments, shipmentsLoading,optimisticUpdateShipment, shipmentsError, token, user, refetchShipments,currentUser } =
     useAppContext();
 
   const [view, setView] = useState("month");
@@ -238,7 +238,7 @@ console.log("newIsoDate",newIsoDate)
 
 
 
-                <GridView/>
+              {currentUser?.role !== "supplier" &&  <GridView/>}
 
 
 
