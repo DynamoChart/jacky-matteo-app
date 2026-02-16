@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Calendar } from "@gravity-ui/icons";
 import { Button, Modal, Card } from "@heroui/react";
 import { useAppContext } from "../context/DataContext";
@@ -12,40 +12,63 @@ export function GridView() {
   const { shipments, refetchShipments } = useAppContext();
 
   const [countdown, setCountdown] = useState(5 * 60); // 5 minutes in seconds
+  const timeoutRef = useRef(null);
+  const isMounted = useRef(true);
 
-  // Countdown timer logic
-  useEffect(() => {
-    if (countdown <= 0) {
-      // Time's up → refresh data and restart
+  // Long-term refresh scheduler (every 5 minutes)
+  const scheduleNextRefresh = () => {
+    if (!isMounted.current) return;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      if (!isMounted.current) return;
+
       refetchShipments?.();
+
       notification.info({
         message: "Data Refreshed",
-        description: "Shipments updated. Countdown restarting...",
+        description: "Today's shipments updated. Refreshing in 5 minutes...",
         placement: "topRight",
         duration: 4,
       });
 
-      // Soft reload page (keeps state clean)
-      window.location.reload();
+      setCountdown(5 * 60); // full reset to 05:00
+      scheduleNextRefresh(); // chain next one
+    }, 5 * 60 * 1000);
+  };
 
-      // Alternatively (if you prefer no full reload):
-      // setCountdown(5 * 60); // just restart timer
-      return;
-    }
+  // Start scheduler once + cleanup
+  useEffect(() => {
+    isMounted.current = true;
+    setCountdown(5 * 60);
+    scheduleNextRefresh();
 
-    const timer = setInterval(() => {
-      setCountdown((prev) => prev - 1);
+    return () => {
+      isMounted.current = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [refetchShipments]);
+
+  // Separate smooth countdown decrement (UI only)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdown((prev) => Math.max(0, prev - 1));
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [countdown, refetchShipments]);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Format countdown as MM:SS
+  // Format MM:SS
   const minutes = Math.floor(countdown / 60);
   const seconds = countdown % 60;
   const timeDisplay = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
-  // Progress ring (0–100%)
+  // Progress ring (0–100%) – kept from your code
   const progress = (countdown / (5 * 60)) * 100;
 
   // Get today's date string in yyyy-MM-dd format for filtering
@@ -68,7 +91,7 @@ export function GridView() {
   return (
     <div className="flex flex-wrap gap-4 relative">
       {/* Countdown Timer – top-right corner */}
-  
+      {/* (you had this comment – I left the spot empty like original) */}
 
       <Modal isDismissable={false}>
         <Button variant="secondary">Grid</Button>
@@ -90,7 +113,7 @@ export function GridView() {
                   </div>
 
                   {/* Small countdown in header too (optional) */}
-                  <div className="text-sm text-gray-500 flex items-center gap-1.5 mr-6 -mt-8" >
+                  <div className="text-sm text-gray-500 flex items-center gap-1.5 mr-6 -mt-8">
                     <RefreshCw size={14} />
                     Next refresh: {timeDisplay}
                   </div>
@@ -98,10 +121,6 @@ export function GridView() {
               </Modal.Header>
 
               <Modal.Body>
-
-
-      
-  
                 {dayShipments.length === 0 ? (
                   <p className="text-center text-gray-500 py-12 text-lg">
                     No shipments scheduled for today.

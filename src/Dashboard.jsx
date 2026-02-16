@@ -23,6 +23,7 @@ import MonthlyCalendar from "./components/MonthlyCalendar";
 import WeeklyCalendar from "./components/WeeklyCalendar";
 import DailyCalendar from "./components/DailyCalendar";
 import LoadingStates from "./components/LoadingStates";
+
 import { notification } from "antd";
 import "antd/dist/antd.css";
 
@@ -253,8 +254,8 @@ console.log("newIsoDate",newIsoDate)
         </div>
         <div className="px-2 md:px-3 py-3 mx-8 mt-0">
   
-  <KpiDashboard shipments={shipments} />
-</div>
+          <KpiDashboard shipments={shipments} />
+        </div>
         {/* Calendar area – scrollable, takes remaining height */}
         <div className="flex-1 overflow-y-auto px-6 pb-6 md:px-8 bg-white md:pb-8 bg-gray-50">
           <div className="border rounded-lg overflow-hidden bg-white shadow ">
@@ -457,9 +458,11 @@ console.log("newIsoDate",newIsoDate)
             )}
           </div>
         </div>
+
+      
         
       </div>
- 
+  
     </DndProvider>
     </>
   );

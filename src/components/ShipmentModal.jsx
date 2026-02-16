@@ -71,6 +71,7 @@ export default function ShipmentModal({
         ? shipment.items.map(item => ({
             ...item,
             key: item._id || Math.random().toString(),
+            actual_quantity: item.actual_quantity || "",
           }))
         : initialValues.items,
     });
@@ -110,6 +111,7 @@ export default function ShipmentModal({
               quantity: Number(item.quantity) || 0,
               uom: item.uom || "FT",
               description: item.description?.trim() || "",
+              ...(isEdit && { actual_quantity: Number(item.actual_quantity) || 0 }),
             })),
         }),
       };
@@ -187,7 +189,7 @@ setVisible(false);         // ← close modal immediately
         open={visible}
         onCancel={() => setVisible(false)}
         footer={null}
-        width={mode === "delete"?500:650}
+        width={mode === "delete"?500:850}
         destroyOnClose
         style={{ top: 20 }}
       
@@ -220,50 +222,59 @@ setVisible(false);         // ← close modal immediately
             className="mt-4"
           >
             {/* Supplier & Location */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {currentUser?.role==!"supplier" && <Form.Item
-                name="supplier"
-                label="Supplier"
-                rules={[{ required: true, message: "Please select supplier" }]}
-              >
-                <Select
-                  placeholder="Select Supplier"
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                >
-                  {allSuppliers.map((sup) => (
-                    <Option key={sup._id} value={sup._id} label={sup.name}>
-                      {sup.name}
-                    </Option>
-                    
-                  ))}
-       
-                </Select>
-                
-              </Form.Item>}
+          {/* Supplier & Location – role-based visibility in edit mode */}
+{/* Supplier & Location – role-based in edit mode */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  {/* Supplier dropdown rules:
+       - admin: always show
+       - location: show
+       - supplier: hide */}
+  {(currentUser?.role === "admin" || currentUser?.role === "location") && (
+    <Form.Item
+      name="supplier"
+      label="Supplier"
+      rules={[{ required: true, message: "Please select supplier" }]}
+    >
+      <Select
+        placeholder="Select Supplier"
+        allowClear
+        showSearch
+        optionFilterProp="label"
+      >
+        {allSuppliers.map((sup) => (
+          <Option key={sup._id} value={sup._id} label={sup.name}>
+            {sup.name}
+          </Option>
+        ))}
+      </Select>
+    </Form.Item>
+  )}
 
-              <Form.Item
-                name="location"
-                label="Location"
-                rules={[{ required: true, message: "Please select location" }]}
-              >
-                <Select
-                  placeholder="Select Location"
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                >
-                  {allLocations.map((loc) => (
-                    <Option key={loc._id} value={loc._id} label={loc.name}>
-                      {loc.name}
-                    </Option>
-                    
-                  ))}
-                        
-                </Select>
-              </Form.Item>
-            </div>
+  {/* Location dropdown rules:
+       - admin: show
+       - supplier: show
+       - location: hide */}
+  {(currentUser?.role === "admin" || currentUser?.role === "supplier") && (
+    <Form.Item
+      name="location"
+      label="Location"
+      rules={[{ required: true, message: "Please select location" }]}
+    >
+      <Select
+        placeholder="Select Location"
+        allowClear
+        showSearch
+        optionFilterProp="label"
+      >
+        {allLocations.map((loc) => (
+          <Option key={loc._id} value={loc._id} label={loc.name}>
+            {loc.name}
+          </Option>
+        ))}
+      </Select>
+    </Form.Item>
+  )}
+</div>
 
             {/* Delivery Date + Tracking + Carrier */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
@@ -425,6 +436,16 @@ setVisible(false);         // ← close modal immediately
                     >
                       <Input type="number" min={1} placeholder="Qty" />
                     </Form.Item>
+                    {isEdit && (
+                      <Form.Item
+                        {...restField}
+                        name={[name, "actual_quantity"]}
+                        label="Actual Qty"
+                       
+                      >
+                        <Input type="number" min={0} placeholder="Received" />
+                      </Form.Item>
+                    )}
 
                     <Form.Item {...restField} name={[name, "uom"]} label="UOM">
                       <Select defaultValue="FT">

@@ -603,7 +603,8 @@ const [hasAccepted, setHasAccepted] = useState(false);
 </Modal.Body>
 <ModalFooter className="flex items-center justify-end gap-3 pt-5 border-t">
 
-{!(selectedDate?.cr_status?.toLowerCase() === "done" && currentUser?.role === "supplier") && (
+{selectedDate?.cr_status?.toLowerCase() !== "done" &&
+  currentUser?.role !== "supplier" && (
     <>
       <div className="flex items-center gap-2">
      

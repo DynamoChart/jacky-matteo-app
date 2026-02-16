@@ -245,7 +245,10 @@ export function AppProvider({ children }) {
       fetchAllSuppliers();
       fetchAllLocations();
     }
-  
+  // Location role needs suppliers (for the dropdown in edit)
+  if (currentUser.role === 'location') {
+    fetchAllSuppliers();     // ← ADD THIS LINE
+  }
     // Suppliers also need locations (and possibly their own supplier data)
     if (currentUser.role === 'supplier' || currentUser.role === 'admin') {
       fetchAllLocations();
@@ -255,7 +258,8 @@ export function AppProvider({ children }) {
     }
   }, [currentUser, userLoading, fetchShipments, fetchAllUsers]);
 console.log("currentUser",currentUser)
-console.log("allLocations",currentUser)
+console.log("shipments",shipments)
+console.log("allSuppliers",allSuppliers)
   // ── Auth actions ───────────────────────────────────────
   const login = (newToken, userData = null) => {
     localStorage.setItem('token', newToken);

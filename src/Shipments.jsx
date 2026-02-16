@@ -391,7 +391,7 @@ if (statusFilter.length > 0) {
     <div className="bg-white min-h-screen py-8">
       <div className=" mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Header + Actions */}
-       {currentUser?.role==!"location" &&  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+       {currentUser?.role !== "location" &&  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
             <Truck className="h-7 w-7 text-indigo-600" />
             Shipments
