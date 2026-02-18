@@ -6,6 +6,7 @@ import { ClockCheck } from "lucide-react";
 import { Button, Chip,Modal,Card } from "@heroui/react";
 import DashTable from "./components/DashTable";
 import KpiDashboard from "./components/KpiDashboard";
+import Chartsi from "./components/Chartsi";
 import { CalendarDays, Package } from "lucide-react";
 import { GridView } from "./components/GridView";
 import {
@@ -192,7 +193,13 @@ console.log("newIsoDate",newIsoDate)
       <div className="flex flex-col bg-white ">
 
         {/* Header – fixed height, no scroll */}
-        <div className="px-6 pt-6 pb-4 md:px-8 bg-white md:pt-8 md:pb-6 border-b mb-3 ">
+       
+        <div className="px-2 md:px-3 py-3 mx-8 mt-0">
+  
+          <KpiDashboard shipments={shipments} />
+        </div>
+        <Chartsi/>
+        <div className="px-6 pt-0 pb-4 md:px-8 bg-white md:pt-0 md:pb-6  mb-3 ">
           <div className="flex flex-col sm:flex-row justify-between items-start h-[10px]  sm:items-center gap-4">
             <Chip
               variant="soft"
@@ -203,11 +210,11 @@ console.log("newIsoDate",newIsoDate)
               {title}
             </Chip>
 
-            <div className="flex flex-wrap bg-white rounded-xl shadow-sm px-3 py-1 items-center gap-2">
+            <div className="flex flex-wrap bg-white rounded-xl shadow-lg px-3 py-1 items-center gap-2">
               <Button variant="danger-soft" size="sm" onPress={goPrev}>
                 ← Prev
               </Button>
-              <Button variant="outline" size="sm" onPress={goToday}>
+              <Button className="bg-warning text-black" size="sm" onPress={goToday}>
                 Today
               </Button>
               <Button variant="danger-soft" size="sm" onPress={goNext}>
@@ -251,10 +258,6 @@ console.log("newIsoDate",newIsoDate)
               </div>
             </div>
           </div>
-        </div>
-        <div className="px-2 md:px-3 py-3 mx-8 mt-0">
-  
-          <KpiDashboard shipments={shipments} />
         </div>
         {/* Calendar area – scrollable, takes remaining height */}
         <div className="flex-1 overflow-y-auto px-6 pb-6 md:px-8 bg-white md:pb-8 bg-gray-50">

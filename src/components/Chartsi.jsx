@@ -1,3 +1,4 @@
+// WeeklyShipmentsByStatusChart.jsx
 import React, { useMemo } from 'react';
 import {
   BarChart,
@@ -7,299 +8,296 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  Legend,
+  LabelList,
 } from 'recharts';
-import { Card } from '@heroui/react';   // ← HeroUI v3 Card (main)
-import { Package, CalendarDays } from 'lucide-react'; // optional icons like your example
 
-// Adjust path to your context
-import { useAppContext } from '../context/DataContext'; // ← CHANGE THIS PATH IF NEEDED
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@heroui/react';
 
-// Date-fns for weekly grouping (install if missing: npm i date-fns)
-import { getISOWeek, getYear, format } from 'date-fns';
+import { useAppContext } from '../context/DataContext'; // adjust path if needed
 
-function Chartsi() {
+import { getISOWeek, getYear, format, startOfWeek, isValid } from 'date-fns';
+
+// Colors matching your design
+const statusColors = {
+  Received: '#198754',
+  Delay: '#fd7e14',
+  TBD: '#6f42c1',
+  Missed: '#dc3545',
+  Scheduled: '#0088F6',
+};
+
+function WeeklyShipmentsByStatusChart() {
   const { shipments } = useAppContext();
 
-  // ────────────────────────────────────────────────
-  // Metrics (On-Time proxy – add In-Full when you have actual_quantity)
-  // ────────────────────────────────────────────────
-  const metrics = useMemo(() => {
-    let total = shipments.length;
-    let goodCount = 0;
-    let totalLbs = 0;
-    const supplierSet = new Set();
-
-    shipments.forEach((s) => {
-      const sup = s.supplier?.name || 'Unknown';
-      supplierSet.add(sup);
-
-      const received = s.status === 'Received';
-      const notMissed = s.missed_delivery !== true;
-      let onTime = received;
-
-      if (s.actual_delivery_date && s.delivery_date) {
-        onTime = new Date(s.actual_delivery_date) <= new Date(s.delivery_date);
-      }
-
-      if (received && notMissed && onTime) goodCount++;
-
-      s.items?.forEach((i) => (totalLbs += i.quantity || 0));
-    });
-
-    return {
-      totalShipments: total,
-      onTimeRate: total > 0 ? Math.round((goodCount / total) * 100) : 0,
-      totalLbs: Math.round(totalLbs),
-      uniqueSuppliers: supplierSet.size,
-    };
-  }, [shipments]);
-
-  // Top 10 Suppliers by On-Time Rate
-  const topSuppliers = useMemo(() => {
-    const map = {};
-
-    shipments.forEach((s) => {
-      const name = s.supplier?.name?.trim() || 'Unknown Supplier';
-      if (!map[name]) map[name] = { total: 0, good: 0 };
-      map[name].total++;
-
-      const received = s.status === 'Received';
-      const notMissed = s.missed_delivery !== true;
-      let onTime = received;
-      if (s.actual_delivery_date && s.delivery_date) {
-        onTime = new Date(s.actual_delivery_date) <= new Date(s.delivery_date);
-      }
-
-      if (received && notMissed && onTime) map[name].good++;
-    });
-
-    return Object.entries(map)
-      .map(([supplier, { total, good }]) => ({
-        supplier: supplier.length > 24 ? supplier.slice(0, 21) + '…' : supplier,
-        fullName: supplier,
-        rate: total > 0 ? Math.round((good / total) * 100) : 0,
-        shipments: total,
-      }))
-      .sort((a, b) => b.rate - a.rate)
-      .slice(0, 10);
-  }, [shipments]);
-
-  // Weekly Incoming Volume
-  const weeklyIncoming = useMemo(() => {
+  const weeklyData = useMemo(() => {
     const weekMap = {};
 
-    shipments.forEach((s) => {
-      if (!s.actual_delivery_date) return;
-      const d = new Date(s.actual_delivery_date);
-      const year = getYear(d);
-      const week = getISOWeek(d);
+    shipments.forEach((shipment) => {
+      let dateStr = shipment.actual_delivery_date || shipment.delivery_date;
+      if (!dateStr) return;
+
+      const date = new Date(dateStr);
+      if (!isValid(date)) return;
+
+      const year = getYear(date);
+      const week = getISOWeek(date);
       const key = `${year}-W${String(week).padStart(2, '0')}`;
 
-      if (!weekMap[key]) weekMap[key] = 0;
-      s.items?.forEach((i) => (weekMap[key] += i.quantity || 0));
+      let status;
+      if (shipment.actual_delivery_date) {
+        status = shipment.status || 'Scheduled';
+      } else {
+        status = 'Scheduled';
+      }
+
+      if (shipment.missed_delivery === true) {
+        status = 'Missed';
+      }
+
+      if (!weekMap[key]) {
+        weekMap[key] = {
+          week: key,
+          total: 0,
+          year,
+          statuses: new Set(),
+        };
+      }
+
+      weekMap[key][status] = (weekMap[key][status] || 0) + 1;
+      weekMap[key].total += 1;
+      weekMap[key].statuses.add(status);
     });
 
-    return Object.entries(weekMap)
-      .map(([week, lbs]) => ({ week, lbs: Math.round(lbs) }))
-      .sort((a, b) => a.week.localeCompare(b.week));
+    return Object.values(weekMap)
+      .sort((a, b) => a.week.localeCompare(b.week))
+      .map((entry) => ({
+        ...entry,
+        weekLabel: format(
+          startOfWeek(
+            new Date(Number(entry.week.split('-')[0]), 0, 1 + (Number(entry.week.split('-W')[1]) - 1) * 7),
+            { weekStartsOn: 1 }
+          ),
+          'MMM d, yyyy'
+        ),
+        statusCount: entry.statuses.size,
+      }));
   }, [shipments]);
 
-  // Top 10 Items (prefer name if exists, fallback to description)
-  const topItems = useMemo(() => {
-    const map = {};
-
-    shipments.forEach((s) => {
-      s.items?.forEach((i) => {
-        const key = i.name?.trim() || i.description?.trim() || 'Unknown Item';
-        map[key] = (map[key] || 0) + (i.quantity || 0);
+  const statusKeys = useMemo(() => {
+    const all = new Set();
+    weeklyData.forEach((w) => {
+      Object.keys(w).forEach((k) => {
+        if (!['week', 'total', 'weekLabel', 'year', 'statuses', 'statusCount'].includes(k)) {
+          all.add(k);
+        }
       });
     });
 
-    return Object.entries(map)
-      .map(([name, qty]) => ({
-        name: name.length > 32 ? name.slice(0, 29) + '…' : name,
-        qty: Math.round(qty),
-      }))
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 10);
-  }, [shipments]);
+    const preferredOrder = ['Received', 'Missed', 'Delay', 'TBD', 'Scheduled'];
+    return Array.from(all).sort((a, b) => {
+      const ia = preferredOrder.indexOf(a);
+      const ib = preferredOrder.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+  }, [weeklyData]);
 
-  // Clean tooltip (minimal, shadcn/heroui style)
-  const CleanTooltip = ({ active, payload, label }) => {
+  // Custom shape for rounded corners only on top (or single bar)
+  const CustomBarShape = (props) => {
+    const { fill, x, y, width, height, payload } = props;
+    const statusCount = payload?.statusCount || 1;
+
+    // Determine if this bar is the top of its stack for this week
+    const isTopOfStack = props.index === statusKeys.length - 1;
+
+    const radius = statusCount === 1 || isTopOfStack ? [4, 4, 0, 0] : [0, 0, 0, 0];
+
+    return (
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={fill}
+        rx={radius[0]}
+        ry={radius[1]}
+        clipPath={`inset(0 round ${radius[0]}px ${radius[1]}px ${radius[2]}px ${radius[3]}px)`}
+      />
+    );
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     const data = payload[0].payload;
+
     return (
-      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm px-4 py-3 text-sm">
-        <p className="font-medium text-gray-900 dark:text-white">
-          {data.fullName || data.name || label}
+      <div className="
+        bg-white dark:bg-gray-950 
+        border border-gray-200 dark:border-gray-800 
+        rounded-lg shadow-md 
+        px-4 py-3 text-sm 
+        min-w-[180px]
+      ">
+        <p className="font-medium text-gray-900 dark:text-gray-100 mb-2 border-b pb-1.5 border-gray-200 dark:border-gray-800">
+          {data.weekLabel}
         </p>
         {payload.map((p, i) => (
-          <p key={i} className="flex items-center gap-2 mt-1">
-            <span
-              className="size-2.5 rounded-full"
-              style={{ backgroundColor: p.color }}
-            />
-            <span className="text-gray-600 dark:text-gray-400">{p.name || p.dataKey}:</span>
-            <span className="font-medium text-gray-900 dark:text-white">
-              {p.value.toLocaleString()} {p.dataKey.includes('rate') ? '%' : 'lbs'}
-            </span>
-          </p>
+          <div key={i} className="flex items-center justify-between gap-6 py-0.5">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+              <span className="text-gray-600 dark:text-gray-400">{p.name}</span>
+            </div>
+            <span className="font-medium">{p.value}</span>
+          </div>
         ))}
+        <div className="flex justify-between mt-2 pt-2 border-t border-gray-200 dark:border-gray-800 font-medium">
+          <span>Total</span>
+          <span>{data.total}</span>
+        </div>
       </div>
     );
   };
 
+  const CustomLabel = (props) => {
+    const { x, y, width, height, value } = props;
+    if (!value || value < 1) return null;
+    const isLightBg = ['#fd7e14', '#6f42c1'].includes(props.fill);
+    return (
+      <text
+        x={x + width / 2}
+        y={y + height / 2 + 1}
+        fill={isLightBg ? '#000000' : '#ffffff'}
+        fontSize={11}
+        fontWeight="bold"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        pointerEvents="none"
+      >
+        {value}
+      </text>
+    );
+  };
+
+  if (weeklyData.length === 0) {
+    return (
+      <Card className="p-6 text-center text-muted-foreground">
+        No shipments with delivery or actual delivery dates.
+      </Card>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-6 space-y-10 bg-gray-50/40 dark:bg-gray-950/40 min-h-screen">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-          Supply Chain Dashboard
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1.5">
-          On-Time Delivery • Weekly Intake • Top Items
-        </p>
-      </div>
+    <div className='p-10 pt-0 bg-white'>
+    <Card className="border border-border bg-card text-card-foreground shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-semibold">
+          Weekly Shipments by Status
+        </CardTitle>
+        <CardDescription>
+          Number of Shipments based on Actual Delivery Date (Or Delivery Date when there is no Actual Delivery Date)  
+        </CardDescription>
+      </CardHeader>
 
-      {/* KPI Cards – HeroUI style */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm rounded-xl">
-          <Card.Header className="pb-2">
-            <Card.Title className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Total Shipments
-            </Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {metrics.totalShipments.toLocaleString()}
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm rounded-xl">
-          <Card.Header className="pb-2">
-            <Card.Title className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              On-Time Rate (proxy)
-            </Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {metrics.onTimeRate}%
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm rounded-xl">
-          <Card.Header className="pb-2">
-            <Card.Title className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Received Inventory
-            </Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {metrics.totalLbs.toLocaleString()}
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">LBS</p>
-          </Card.Content>
-        </Card>
-
-        <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm rounded-xl">
-          <Card.Header className="pb-2">
-            <Card.Title className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Suppliers
-            </Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {metrics.uniqueSuppliers}
-            </div>
-          </Card.Content>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Top Suppliers */}
-        <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm rounded-xl">
-          <Card.Header>
-            <Card.Title>Top 10 Suppliers – On-Time Rate</Card.Title>
-            <Card.Description>Percentage of shipments received on time</Card.Description>
-          </Card.Header>
-          <Card.Content className="pt-4 h-[380px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topSuppliers} margin={{ top: 20, right: 20, left: 0, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb dark:#374151" vertical={false} />
-                <XAxis
-                  dataKey="supplier"
-                  angle={-35}
-                  textAnchor="end"
-                  height={70}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                />
-                <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
-                <Tooltip content={<CleanTooltip />} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                <Bar dataKey="rate" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={60} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card.Content>
-        </Card>
-
-        {/* Weekly Volume */}
-        <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm rounded-xl">
-          <Card.Header>
-            <Card.Title>Weekly Received Volume</Card.Title>
-            <Card.Description>Based on actual delivery dates</Card.Description>
-          </Card.Header>
-          <Card.Content className="pt-4 h-[380px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weeklyIncoming} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb dark:#374151" vertical={false} />
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
-                <Tooltip content={<CleanTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="lbs"
-                  stroke="#3b82f6"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 6, strokeWidth: 2, stroke: 'white' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card.Content>
-        </Card>
-      </div>
-
-      {/* Top Items */}
-      <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm rounded-xl">
-        <Card.Header>
-          <Card.Title>Top 10 Items by Quantity</Card.Title>
-          <Card.Description>Total ordered quantity (LBS)</Card.Description>
-        </Card.Header>
-        <Card.Content className="pt-4 h-[420px]">
+      <CardContent className="pt-0">
+        <div className="h-[360px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={topItems}
-              layout="vertical"
-              margin={{ top: 20, right: 40, left: 180, bottom: 20 }}
+              data={weeklyData}
+              margin={{ top: 24, right: 16, left: -8, bottom: 40 }}
+              barCategoryGap={0}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb dark:#374151" horizontal={false} />
-              <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 13 }} />
-              <Tooltip content={<CleanTooltip />} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-              <Bar dataKey="qty" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={28} />
+              <CartesianGrid 
+                vertical={false} 
+                strokeDasharray="3 3" 
+                stroke="hsl(var(--border))" 
+                opacity={0.4} 
+              />
+
+              <XAxis
+                dataKey="weekLabel"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                dy={10}
+              />
+
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                width={32}
+              />
+
+              <Tooltip 
+                content={<CustomTooltip />} 
+                cursor={{ fill: 'rgba(59, 130, 246, 0.15)' }}
+              />
+
+              <Legend 
+                wrapperStyle={{ 
+                  fontSize: '13px', 
+                  paddingTop: '8px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  gap: '16px'
+                }} 
+              />
+
+{statusKeys.map((status, idx) => (
+  <Bar
+  key={status}
+  dataKey={status}
+  stackId="a"
+  fill={statusColors[status] || statusColors.Scheduled}
+  shape={(props) => {
+    const { payload, idx: barIdx } = props;
+    const count = payload?.statusCount ?? 1;
+
+    let radiusArr;
+
+    if (count === 1) {
+      radiusArr = [4, 4, 0, 0];
+    } else if (count === 2) {
+      radiusArr = barIdx === 0 ? [0, 0, 0, 0] : [0, 0, 0, 0];
+    } else if (count === 3) {
+      radiusArr = (barIdx === 0 || barIdx === 1) ? [0, 0, 0, 0] :barIdx === 2 ? [4, 4, 0, 0]:[0, 0, 0, 0];
+    } else if (count === 4) {
+      radiusArr = (barIdx === 0 || barIdx === 1 || barIdx === 2) ? [0, 0, 0, 0] : [4, 4, 0, 0];
+    } else if (count === 5) {
+      radiusArr = (barIdx === 0 || barIdx === 1 || barIdx === 2 || barIdx === 3) ? [0, 0, 0, 0] : [4, 4, 0, 0];
+    } else {
+      radiusArr = barIdx === statusKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0];
+    }
+
+    return (
+      <rect
+        {...props}
+        rx={radiusArr[0]}
+        ry={radiusArr[1]}
+        // for bottom corners (usually 0 anyway)
+        // you can add clip-path if needed for perfect rounding
+      />
+    );
+  }}
+  maxBarSize={60}
+  
+>
+<LabelList 
+                    dataKey={status} 
+                    position="top" 
+                    content={<CustomLabel />} 
+                  />
+                </Bar>
+))}
             </BarChart>
           </ResponsiveContainer>
-        </Card.Content>
-      </Card>
-
-      <p className="text-xs text-gray-500 dark:text-gray-400 text-center pt-8">
-        On-Time proxy calculation (In-Full pending actual_quantity data) • {shipments.length} shipments
-      </p>
+        </div>
+      </CardContent>
+    </Card>
     </div>
   );
 }
 
-export default Chartsi;
+export default WeeklyShipmentsByStatusChart;

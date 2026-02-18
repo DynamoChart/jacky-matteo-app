@@ -326,7 +326,7 @@ if (statusFilter.length > 0) {
         const cleanPath = publicPath.replace(/^\//, '');
         
         const fullUrl = `${import.meta.env.VITE_API_BASE_URL}${cleanPath}`;
-    
+        console.log("fullUrl",fullUrl)
         return (
           <Tooltip title="Open attachment">
             <AntButton

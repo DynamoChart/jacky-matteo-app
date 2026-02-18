@@ -8,9 +8,10 @@ export default function Dash() {
   const { shipments } = useAppContext();
   return (
     <div>
+       {/* <Chartsi/> */}
    <Dashboard/>
    <DashTable/>
-   {/* <Chartsi/> */}
+  
     </div>
   )
 }

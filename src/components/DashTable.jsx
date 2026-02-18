@@ -140,8 +140,8 @@ export default function DashTable() {
   ];
 
   return (
-    <div className="bg-white mb-5 flex justify-between ">
-      <div className="bg-white mx-8 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white mb-5 flex justify-between  ">
+      <div className="bg-white mx-8 rounded-2xl shadow-sm border border-gray-100 overflow-hidden  w-[50%]">
         <div className="px-6 py-5 border-b  border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 className="  text-gray-800 flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-blue-600" />
@@ -180,7 +180,7 @@ export default function DashTable() {
         />
       </div>
 
-<div className="px-2 md:px-3 py-3 mx-8 mt-0">
+<div className="px-2 md:px-3  py-0 mx-8 mt-0 w-[50%]">
   
 <DashTabletwo/>
 </div>
