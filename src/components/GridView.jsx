@@ -1,98 +1,99 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Calendar } from "@gravity-ui/icons";
 import { Button, Modal, Card } from "@heroui/react";
 import { useAppContext } from "../context/DataContext";
 import { format, parseISO } from "date-fns";
-import { CalendarDays, Package, RefreshCw } from "lucide-react";
+import { Package, RefreshCw } from "lucide-react";
 import { notification } from "antd";
 
 export function GridView() {
   const { shipments, refetchShipments } = useAppContext();
 
-  const [countdown, setCountdown] = useState(5 * 60); // 5 minutes in seconds
+  const [countdown, setCountdown] = useState(5 * 60);
   const timeoutRef = useRef(null);
   const isMounted = useRef(true);
 
-  // Long-term refresh scheduler (every 5 minutes)
   const scheduleNextRefresh = () => {
     if (!isMounted.current) return;
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     timeoutRef.current = setTimeout(() => {
       if (!isMounted.current) return;
-
       refetchShipments?.();
-
       notification.info({
         message: "Data Refreshed",
         description: "Today's shipments updated. Refreshing in 5 minutes...",
         placement: "topRight",
         duration: 4,
       });
-
-      setCountdown(5 * 60); // full reset to 05:00
-      scheduleNextRefresh(); // chain next one
+      setCountdown(5 * 60);
+      scheduleNextRefresh();
     }, 5 * 60 * 1000);
   };
 
-  // Start scheduler once + cleanup
   useEffect(() => {
     isMounted.current = true;
     setCountdown(5 * 60);
     scheduleNextRefresh();
-
     return () => {
       isMounted.current = false;
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [refetchShipments]);
 
-  // Separate smooth countdown decrement (UI only)
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown((prev) => Math.max(0, prev - 1));
     }, 1000);
-
     return () => clearInterval(interval);
   }, []);
 
-  // Format MM:SS
   const minutes = Math.floor(countdown / 60);
   const seconds = countdown % 60;
   const timeDisplay = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
-  // Progress ring (0–100%) – kept from your code
-  const progress = (countdown / (5 * 60)) * 100;
-
-  // Get today's date string in yyyy-MM-dd format for filtering
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
-  // Filter only today's shipments
-  const dayShipments = shipments?.filter((s) => {
-    const dateStr = s.delivery_date || s.actual_delivery_date;
-    if (!dateStr) return false;
-    try {
-      return format(parseISO(dateStr), "yyyy-MM-dd") === todayStr;
-    } catch {
-      return false;
-    }
-  }) || [];
+  // Filter + sort by time (earliest first)
+  const dayShipments = useMemo(() => {
+    const filtered = shipments?.filter((s) => {
+      const dateStr = s.delivery_date || s.actual_delivery_date;
+      if (!dateStr) return false;
+      try {
+        return format(parseISO(dateStr), "yyyy-MM-dd") === todayStr;
+      } catch {
+        return false;
+      }
+    }) || [];
 
-  // Format today's date nicely for display
+    return filtered
+      .map((shipment) => {
+        const dateStr = shipment.actual_delivery_date || shipment.delivery_date;
+        const date = dateStr ? parseISO(dateStr) : null;
+        const timeMs = date ? date.getTime() : Infinity;
+        const isPlanned = !shipment.actual_delivery_date;
+
+        let timeLabel = date ? format(date, "HH:mm") : "—";
+        if (isPlanned && timeLabel !== "—") {
+          timeLabel += "";
+        }
+
+        return {
+          ...shipment,
+          sortTime: timeMs,
+          timeLabel,
+          isPlanned,
+        };
+      })
+      .sort((a, b) => a.sortTime - b.sortTime); // earliest first
+  }, [shipments]);
+
   const todayDisplay = format(new Date(), "EEEE, MMMM d, yyyy");
 
   return (
     <div className="flex flex-wrap gap-4 relative">
-      {/* Countdown Timer – top-right corner */}
-      {/* (you had this comment – I left the spot empty like original) */}
-
       <Modal isDismissable={false}>
         <Button variant="secondary">Grid</Button>
 
@@ -112,7 +113,6 @@ export function GridView() {
                     </Modal.Heading>
                   </div>
 
-                  {/* Small countdown in header too (optional) */}
                   <div className="text-sm text-gray-500 flex items-center gap-1.5 mr-6 -mt-8">
                     <RefreshCw size={14} />
                     Next refresh: {timeDisplay}
@@ -126,7 +126,7 @@ export function GridView() {
                     No shipments scheduled for today.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
+                  <div className="grid grid-cols-3 w-full">
                     {dayShipments.map((shipment, idx) => {
                       let colors = {
                         bg: "bg-[#0088F6]",
@@ -169,65 +169,48 @@ export function GridView() {
                         };
                       }
 
-                      const deliveryTime = shipment.delivery_date
-                        ? format(parseISO(shipment.delivery_date), "HH:mm")
-                        : "—";
+                      const deliveryTime = shipment.timeLabel;
 
                       return (
                         <Card
                           key={shipment._id || idx}
-                          className={`w-full max-w-md p-1 ${colors.bg} ${colors.border} shadow-md rounded-xl overflow-hidden p-0 m-0`}
+                          className={`p-1 ${colors.bg} ${colors.border} shadow-md rounded-xl overflow-hidden p-0 m-0 mt-2 mr-2`}
                         >
-                          <Card.Header className="pb-2 mt-3 px-5 pt-2">
+                          <Card.Header className="pb-0 mt-3 px-5 pt-0">
                             <Card.Title className={`${colors.text} text-lg flex font-semibold items-center gap-2`}>
                               <Package className={`${colors.time} size-5`} />
                               {shipment.tracking_number || "—"} / ID: {shipment.shortId || "—"} / Time: {deliveryTime}
                               {shipment.missed_delivery && (
                                 <span className="text-red-200 text-xs ml-1">Missed</span>
                               )}
+                              <p className={`${colors.text} font-semibold`}>{status}</p>
                             </Card.Title>
                           </Card.Header>
 
-                          <div className="px-5 pb-4 text-lg space-y-2">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                          <div className="px-5 pb-0 text-md space-y-0">
+                            <div className="grid grid-cols-1">
                               <div>
-                                <span className={`${colors.time} font-medium`}>Supplier → Location:</span>
                                 <p className={`${colors.text}`}>
                                   {shipment.supplier?.name || "—"} → {shipment.location?.name || "—"}
                                 </p>
                               </div>
-
-                              <div>
-                                <span className={`${colors.time} font-medium`}>Status:</span>
-                                <p className={`${colors.text} font-medium`}>{status}</p>
-                              </div>
                             </div>
 
-                            <div className="pt-2 text-sm h-[60px] ">
-  <div className="mt-1   gap-2">
-    {shipment.items?.length > 0 ? (
-      shipment.items.map((item, i) => (
-        <div
-          key={i}
-          className={`inline-flex items-center gap-1.5 text-[14px] rounded-full  ${colors.bg} ${colors.text} flex flex-wrap`}
-        >
-          <span className="font-sm ">
-            {item.quantity || "?"} {item.uom || ""}
-          </span>
-          {item.po && (
-            <>
-              <span className="opacity-70">• PO</span>
-              <span>{item.po}</span>
-              {item.po_line && <span>-{item.po_line}</span>}
-            </>
-          )}
-        </div>
-      ))
-    ) : (
-      <div className={`text-sm ${colors.time}`}>No items</div>
-    )}
-  </div>
-</div>
+                            <div className=" w-full">
+                              <div className="grid grid-cols-2 mt-1 space-y-0 wrap">
+                                {shipment.items?.length > 0 ? (
+                                  shipment.items.map((item, i) => (
+                                    <div key={i} className={`${colors.text}`}>
+                                      • {item.quantity || "?"} {item.uom || ""}
+                                      {item.po && ` • PO ${item.po}`}
+                                      {item.po_line && `-${item.po_line}`}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className={`${colors.time}`}>No items</div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </Card>
                       );
