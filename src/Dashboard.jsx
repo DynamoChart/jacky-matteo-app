@@ -309,7 +309,7 @@ console.log("newIsoDate",newIsoDate)
   });
 
             const statusCounts = dayShipments.reduce((acc, s) => {
-              const key = s.missed_delivery ? "Missed" : s.status || "Unknown";
+              const key = s.missed_delivery ? "Missed" : s.status || "Scheduled";
               acc[key] = (acc[key] || 0) + 1;
               return acc;
             }, {});
@@ -385,25 +385,26 @@ console.log("newIsoDate",newIsoDate)
                   return (
                     <Card
                       key={shipment._id || idx}
-                      className={`w-full ${colors.bg} ${colors.border} shadow-md rounded-xl overflow-hidden`}
+                      className={`w-full ${colors.bg} ${colors.border} shadow-md rounded-xl overflow-hidden p-0`}
                     >
-                      <Package
-                        aria-label="Package icon"
-                        className={`${colors.time} size-6 ml-5 mt-5`}
-                        role="img"
-                      />
+                     
 
                       <Card.Header className="pb-2 px-5 pt-2">
-                        <Card.Title className={`${colors.text} text-base font-semibold flex items-center gap-2`}>
+                        <Card.Title className={`${colors.text} text-lg font-semibold flex items-center gap-2`}>
+                        <Package
+                        aria-label="Package icon"
+                        className={`${colors.time} size-6 ml-0 mt-0`}
+                        role="img"
+                      />
                           {shipment.shortId || shipment.tracking_number || "No ID"}
                           {shipment.missed_delivery && " • Missed"}
                         </Card.Title>
-                        <Card.Description className={`${colors.time} text-xs mt-1`}>
+                        <Card.Description className={`${colors.time} text-md mt-1 pl-0`}>
                           {format(parseISO(shipment.delivery_date), "MMM d, yyyy • HH:mm")}
                         </Card.Description>
                       </Card.Header>
 
-                      <div className="px-5 pb-4 text-xs space-y-2.5">
+                      <div className="px-5 pb-4 text-md space-y-2.5 h-full">
                         {/* same grid and fields as before */}
                         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                           <div><span className={`${colors.time} font-medium`}>Supplier:</span> <p className={`${colors.text}`}>{shipment.supplier?.name || "—"}</p></div>
@@ -419,13 +420,14 @@ console.log("newIsoDate",newIsoDate)
                           <p className={`${colors.text} line-clamp-2`}>{shipment.items?.[0]?.description || "—"}</p>
                         </div>
 
-                        <div className="pt-2 border-t border-white/20">
-                          <span className={`${colors.time} font-medium`}>Status:</span>
-                          <strong className={`${colors.text} ml-2`}>{shipment.status || "—"}</strong>
+                        <div className="flex flex-col pt-2 border-t border-white/20 h-[25px]">
+                          <span className={`${colors.time} font-medium`}>Status: <strong className={`${colors.text} ml-2`}>{shipment.status || "Scheduled"}</strong></span>
+                          
+                          <strong className="text-white">{shipment.cr_status || "Unknown"}</strong>
                         </div>
                       </div>
 
-                      <Card.Footer className="px-5 py-3 border-t border-white/20 text-xs">
+                      <Card.Footer className="px-5 py-3  pt-0 border-t border-white/20 text-md">
                         <div className={`${colors.time}`}>
                           Tracking: {shipment.tracking_number || "—"}
                         </div>

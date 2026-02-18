@@ -126,7 +126,7 @@ export function GridView() {
                     No shipments scheduled for today.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
                     {dayShipments.map((shipment, idx) => {
                       let colors = {
                         bg: "bg-[#0088F6]",
@@ -176,7 +176,7 @@ export function GridView() {
                       return (
                         <Card
                           key={shipment._id || idx}
-                          className={`w-full max-w-md p-1 ${colors.bg} ${colors.border} shadow-md rounded-xl overflow-hidden`}
+                          className={`w-full max-w-md p-1 ${colors.bg} ${colors.border} shadow-md rounded-xl overflow-hidden p-0 m-0`}
                         >
                           <Card.Header className="pb-2 mt-3 px-5 pt-2">
                             <Card.Title className={`${colors.text} text-lg flex font-semibold items-center gap-2`}>
@@ -203,21 +203,31 @@ export function GridView() {
                               </div>
                             </div>
 
-                            <div className="pt-2">
-                              <div className="mt-1 space-y-1">
-                                {shipment.items?.length > 0 ? (
-                                  shipment.items.map((item, i) => (
-                                    <div key={i} className={`${colors.text}`}>
-                                      • {item.quantity || "?"} {item.uom || ""}
-                                      {item.po && ` • PO ${item.po}`}
-                                      {item.po_line && `-${item.po_line}`}
-                                    </div>
-                                  ))
-                                ) : (
-                                  <div className={`${colors.time}`}>No items</div>
-                                )}
-                              </div>
-                            </div>
+                            <div className="pt-2 text-sm h-[60px] ">
+  <div className="mt-1   gap-2">
+    {shipment.items?.length > 0 ? (
+      shipment.items.map((item, i) => (
+        <div
+          key={i}
+          className={`inline-flex items-center gap-1.5 text-[14px] rounded-full  ${colors.bg} ${colors.text} flex flex-wrap`}
+        >
+          <span className="font-sm ">
+            {item.quantity || "?"} {item.uom || ""}
+          </span>
+          {item.po && (
+            <>
+              <span className="opacity-70">• PO</span>
+              <span>{item.po}</span>
+              {item.po_line && <span>-{item.po_line}</span>}
+            </>
+          )}
+        </div>
+      ))
+    ) : (
+      <div className={`text-sm ${colors.time}`}>No items</div>
+    )}
+  </div>
+</div>
                           </div>
                         </Card>
                       );
