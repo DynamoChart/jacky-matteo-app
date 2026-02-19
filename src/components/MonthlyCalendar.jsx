@@ -8,7 +8,7 @@ import {
   parseISO,
 } from "date-fns";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { ChevronDown, ChevronUp } from "lucide-react"; // or your icon lib
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 const ItemTypes = { SHIPMENT: "shipment" };
 
@@ -20,7 +20,7 @@ export default function MonthlyCalendar({
   onUpdate,
   onDayClick,
 }) {
-  const [expandedDays, setExpandedDays] = useState(new Set()); // Set of date strings that are expanded
+  const [expandedDays, setExpandedDays] = useState(new Set()); // Set of ISO date strings that are expanded
 
   const toggleExpand = (date) => {
     const key = date.toISOString();
@@ -37,7 +37,7 @@ export default function MonthlyCalendar({
   };
 
   return (
-    <LayoutGroup> {/* Helps coordinate layout animations across siblings */}
+    <LayoutGroup>
       <div className="grid grid-cols-7 gap-px overflow-hidden shadow-sm border border-gray-200/70">
         {/* Weekday headers */}
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
@@ -81,20 +81,16 @@ function DayCell({
 }) {
   const isCurrentMonth = isSameMonth(date, currentDate);
   const isToday = isSameDay(date, new Date());
-    // ── ADD THIS ──────────────────────────────────────────────
-    const sortedShipments = [...dayShipments].sort((a, b) => {
-      // Sort by delivery time, earliest first (morning → evening)
-      const timeA = a.delivery_date ? parseISO(a.delivery_date).getTime() : 0;
-      const timeB = b.delivery_date ? parseISO(b.delivery_date).getTime() : 0;
-      return timeA - timeB;
-    });
-  
-    const visibleShipments = isExpanded 
-      ? sortedShipments 
-      : sortedShipments.slice(0, 2);
-    // ──────────────────────────────────────────────────────────
 
-    const hiddenCount = dayShipments.length - 2;   // keep using original count for "+X more"
+  // Sort shipments by delivery time (earliest first)
+  const sortedShipments = [...dayShipments].sort((a, b) => {
+    const timeA = a.delivery_date ? parseISO(a.delivery_date).getTime() : 0;
+    const timeB = b.delivery_date ? parseISO(b.delivery_date).getTime() : 0;
+    return timeA - timeB;
+  });
+
+  const visibleShipments = isExpanded ? sortedShipments : sortedShipments.slice(0, 2);
+  const hiddenCount = dayShipments.length - 2;
 
   const [{ isOver }, drop] = useDrop(() => ({
     accept: ItemTypes.SHIPMENT,
@@ -109,9 +105,7 @@ function DayCell({
 
   return (
     <motion.div
-      layout               // ← this enables smooth height & position animation
-      ref={drop}
-      onClick={() => onDayClick(date)}
+      
       className={`
         group relative rounded-sm lg:min-h-[7rem] p-2 
         flex flex-col bg-white transition-colors duration-200
@@ -122,63 +116,69 @@ function DayCell({
         ${isToday ? "bg-blue-50/30 ring-1 ring-blue-200/70" : ""}
         ${isOver ? "bg-amber-50/60 ring-2 ring-amber-300/50" : ""}
       `}
-      style={{ minHeight: isExpanded ? "auto" : "7.5rem" }} // helps motion know base height
+      style={{ minHeight: isExpanded ? "auto" : "7.5rem" }}
     >
-      <div className="flex items-start justify-between">
-        {/* Day number */}
-        <div
-          className={`
-            text-right text-[10px] tracking-tight
-            ${isCurrentMonth ? "text-gray-900" : "text-gray-400"}
-            ${isToday ? "text-blue-600" : ""}
-          `}
-        >
-          {format(date, "d")}
+      {/* Inner drop target – plain div so react-dnd works reliably */}
+      <div
+        ref={drop}
+        onClick={() => onDayClick(date)}
+        className="flex-1 flex flex-col h-full"
+      >
+        <div className="flex items-start justify-between">
+          {/* Day number */}
+          <div
+            className={`
+              text-right text-[10px] tracking-tight
+              ${isCurrentMonth ? "text-gray-900" : "text-gray-400"}
+              ${isToday ? "text-blue-600" : ""}
+            `}
+          >
+            {format(date, "d")}
+          </div>
+
+          {/* Expand/Collapse button */}
+          {dayShipments.length > 2 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand();
+              }}
+              className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1"
+            >
+              {isExpanded ? (
+                <>
+                  Show less <ChevronUp size={14} />
+                </>
+              ) : (
+                <>
+                  +{hiddenCount} <ChevronDown size={14} />
+                </>
+              )}
+            </button>
+          )}
         </div>
 
-        {/* Expand/Collapse button – only show if there are hidden items */}
-        {dayShipments.length > 2 && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation(); // prevent triggering onDayClick
-              toggleExpand();
-            }}
-            className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1"
-          >
-            {isExpanded ? (
-              <>
-                Show less <ChevronUp size={14} />
-              </>
-            ) : (
-              <>
-                +{hiddenCount} <ChevronDown size={14} />
-              </>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Shipments container */}
-      <div className="mt-1 ml-2 flex-1 space-y-1 overflow-hidden">
-        <AnimatePresence>
-          {visibleShipments.map((s) => (
-            <motion.div
-              key={s._id}           // important for AnimatePresence
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              layout                // animates position when others appear/disappear
-            >
-              <ShipmentCard shipment={s} canDrag={canDrag} />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {/* Shipments container */}
+        <div className="mt-1 ml-2 flex-1 space-y-1 overflow-hidden">
+          <AnimatePresence>
+            {visibleShipments.map((s) => (
+              <motion.div
+                key={s._id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                layout
+              >
+                <ShipmentCard shipment={s} canDrag={canDrag} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );
 }
-
 
 function ShipmentCard({ shipment, canDrag }) {
   const [{ isDragging }, drag] = useDrag(() => ({
