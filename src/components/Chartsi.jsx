@@ -73,7 +73,7 @@ function WeeklyShipmentsByStatusChart() {
       .sort((a, b) => a.week.localeCompare(b.week))
       .map((entry) => ({
         ...entry,
-        weekLabel: format(
+        weeklabel: format(
           startOfWeek(
             new Date(Number(entry.week.split('-')[0]), 0, 1 + (Number(entry.week.split('-W')[1]) - 1) * 7),
             { weekStartsOn: 1 }
@@ -88,7 +88,7 @@ function WeeklyShipmentsByStatusChart() {
     const all = new Set();
     weeklyData.forEach((w) => {
       Object.keys(w).forEach((k) => {
-        if (!['week', 'total', 'weekLabel', 'year', 'statuses', 'statusCount'].includes(k)) {
+        if (!['week', 'total', 'weeklabel', 'year', 'statuses', 'statusCount'].includes(k)) {
           all.add(k);
         }
       });
@@ -140,7 +140,7 @@ function WeeklyShipmentsByStatusChart() {
         min-w-[180px]
       ">
         <p className="font-medium text-gray-900 dark:text-gray-100 mb-2 border-b pb-1.5 border-gray-200 dark:border-gray-800">
-          {data.weekLabel}
+          {data.weeklabel}
         </p>
         {payload.map((p, i) => (
           <div key={i} className="flex items-center justify-between gap-6 py-0.5">
@@ -215,7 +215,7 @@ function WeeklyShipmentsByStatusChart() {
               />
 
               <XAxis
-                dataKey="weekLabel"
+                dataKey="weeklabel"
                 tickLine={false}
                 axisLine={false}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
@@ -252,32 +252,32 @@ function WeeklyShipmentsByStatusChart() {
   stackId="a"
   fill={statusColors[status] || statusColors.Scheduled}
   shape={(props) => {
-    const { payload, idx: barIdx } = props;
+    const { x, y, width, height, fill, payload, index: barIdx } = props;
     const count = payload?.statusCount ?? 1;
-
-    let radiusArr;
-
+  
+    let radiusArr = [0, 0, 0, 0];
+  
+    // Your existing logic (simplified a bit)
     if (count === 1) {
       radiusArr = [4, 4, 0, 0];
-    } else if (count === 2) {
-      radiusArr = barIdx === 0 ? [0, 0, 0, 0] : [0, 0, 0, 0];
-    } else if (count === 3) {
-      radiusArr = (barIdx === 0 || barIdx === 1) ? [0, 0, 0, 0] :barIdx === 2 ? [4, 4, 0, 0]:[0, 0, 0, 0];
-    } else if (count === 4) {
-      radiusArr = (barIdx === 0 || barIdx === 1 || barIdx === 2) ? [0, 0, 0, 0] : [4, 4, 0, 0];
-    } else if (count === 5) {
-      radiusArr = (barIdx === 0 || barIdx === 1 || barIdx === 2 || barIdx === 3) ? [0, 0, 0, 0] : [4, 4, 0, 0];
-    } else {
-      radiusArr = barIdx === statusKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0];
+    } else if (count > 1) {
+      // Top bar of the stack gets rounded top corners
+      if (barIdx === statusKeys.length - 1) {
+        radiusArr = [4, 4, 0, 0];
+      }
     }
-
+  
     return (
       <rect
-        {...props}
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={fill}
         rx={radiusArr[0]}
         ry={radiusArr[1]}
-        // for bottom corners (usually 0 anyway)
-        // you can add clip-path if needed for perfect rounding
+        // Optional: better rounding control
+        // clipPath={`inset(0 round ${radiusArr[0]}px ${radiusArr[1]}px ${radiusArr[2]}px ${radiusArr[3]}px)`}
       />
     );
   }}

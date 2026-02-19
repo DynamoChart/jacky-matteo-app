@@ -1,5 +1,6 @@
 // src/MonthlyCalendar.jsx
-import { useState } from "react";
+import { useState,memo } from "react";
+
 import { useDrop, useDrag } from "react-dnd";
 import {
   format,
@@ -7,7 +8,6 @@ import {
   isSameDay,
   parseISO,
 } from "date-fns";
-import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const ItemTypes = { SHIPMENT: "shipment" };
@@ -15,13 +15,44 @@ const ItemTypes = { SHIPMENT: "shipment" };
 export default function MonthlyCalendar({
   days,
   currentDate,
-  shipments,
+  shipments = [],
   canDrag,
   onUpdate,
   onDayClick,
 }) {
-  const [expandedDays, setExpandedDays] = useState(new Set()); // Set of ISO date strings that are expanded
+  const [expandedDays, setExpandedDays] = useState(new Set());
+// If no shipments yet → show loading placeholder
+if (shipments.length === 0) {
+  return (
+    <div className="grid grid-cols-7 gap-px overflow-hidden shadow-sm border border-gray-200/70 min-h-[500px]">
+      {/* Header row */}
+      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+        <div
+          key={day}
+          className="bg-[#F9C97C] backdrop-blur-sm py-1.5 text-center text-xs font-semibold tracking-wide text-black uppercase"
+        >
+          {day}
+        </div>
+      ))}
 
+      {/* Skeleton grid while loading */}
+      {Array.from({ length: 35 }).map((_, i) => (
+        <div
+          key={i}
+          className="bg-white border-b border-r border-gray-100 p-2 min-h-[7.5rem] animate-pulse"
+        />
+      ))}
+
+      {/* Centered loading message */}
+      <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 pointer-events-none">
+        <div className="text-center">
+          <div className="text-lg font-medium text-gray-600 mb-2">Loading shipments...</div>
+          <div className="text-sm text-gray-500">Please wait a moment</div>
+        </div>
+      </div>
+    </div>
+  );
+}
   const toggleExpand = (date) => {
     const key = date.toISOString();
     setExpandedDays((prev) => {
@@ -37,35 +68,32 @@ export default function MonthlyCalendar({
   };
 
   return (
-    <LayoutGroup>
-      <div className="grid grid-cols-7 gap-px overflow-hidden shadow-sm border border-gray-200/70">
-        {/* Weekday headers */}
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div
-            key={day}
-            className="bg-[#F9C97C] backdrop-blur-sm py-1.5 text-center text-xs font-semibold tracking-wide text-black uppercase"
-          >
-            {day}
-          </div>
-        ))}
+    <div className="grid grid-cols-7 gap-px overflow-hidden shadow-sm border border-gray-200/70">
+      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+        <div
+          key={day}
+          className="bg-[#F9C97C] backdrop-blur-sm py-1.5 text-center text-xs font-semibold tracking-wide text-black uppercase"
+        >
+          {day}
+        </div>
+      ))}
 
-        {days.map((date) => (
-          <DayCell
-            key={date.toISOString()}
-            date={date}
-            currentDate={currentDate}
-            isExpanded={expandedDays.has(date.toISOString())}
-            toggleExpand={() => toggleExpand(date)}
-            dayShipments={shipments.filter((s) =>
-              s.delivery_date ? isSameDay(parseISO(s.delivery_date), date) : false
-            )}
-            canDrag={canDrag}
-            onUpdate={onUpdate}
-            onDayClick={handleDayClick}
-          />
-        ))}
-      </div>
-    </LayoutGroup>
+      {days.map((date) => (
+        <DayCell
+          key={date.toISOString()}
+          date={date}
+          currentDate={currentDate}
+          isExpanded={expandedDays.has(date.toISOString())}
+          toggleExpand={() => toggleExpand(date)}
+          dayShipments={shipments.filter((s) =>
+            s.delivery_date ? isSameDay(parseISO(s.delivery_date), date) : false
+          )}
+          canDrag={canDrag}
+          onUpdate={onUpdate}
+          onDayClick={handleDayClick}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -82,7 +110,8 @@ function DayCell({
   const isCurrentMonth = isSameMonth(date, currentDate);
   const isToday = isSameDay(date, new Date());
 
-  // Sort shipments by delivery time (earliest first)
+  console.log(`DayCell ${format(date, 'MMM d')} - canDrag:`, canDrag, 'shipments:', dayShipments.length);
+
   const sortedShipments = [...dayShipments].sort((a, b) => {
     const timeA = a.delivery_date ? parseISO(a.delivery_date).getTime() : 0;
     const timeB = b.delivery_date ? parseISO(b.delivery_date).getTime() : 0;
@@ -95,17 +124,25 @@ function DayCell({
   const [{ isOver }, drop] = useDrop(() => ({
     accept: ItemTypes.SHIPMENT,
     drop: (item) => {
+      console.log("DROPPED SUCCESSFULLY in monthly view!", {
+        itemId: item.id,
+        originalDate: item.delivery_date,
+        targetDay: format(date, 'yyyy-MM-dd'),
+      });
+
       const original = parseISO(item.delivery_date);
-      const newDate = new Date(date);
+      const newDate = new Date(date);                    // start from target day
       newDate.setHours(original.getHours(), original.getMinutes(), 0, 0);
+
+      console.log("New ISO date being sent:", newDate.toISOString());
+
       onUpdate(item.id, newDate.toISOString());
     },
     collect: (monitor) => ({ isOver: !!monitor.isOver() }),
   }));
 
   return (
-    <motion.div
-      
+    <div
       className={`
         group relative rounded-sm lg:min-h-[7rem] p-2 
         flex flex-col bg-white transition-colors duration-200
@@ -118,14 +155,12 @@ function DayCell({
       `}
       style={{ minHeight: isExpanded ? "auto" : "7.5rem" }}
     >
-      {/* Inner drop target – plain div so react-dnd works reliably */}
       <div
         ref={drop}
         onClick={() => onDayClick(date)}
         className="flex-1 flex flex-col h-full"
       >
         <div className="flex items-start justify-between">
-          {/* Day number */}
           <div
             className={`
               text-right text-[10px] tracking-tight
@@ -136,7 +171,6 @@ function DayCell({
             {format(date, "d")}
           </div>
 
-          {/* Expand/Collapse button */}
           {dayShipments.length > 2 && (
             <button
               onClick={(e) => {
@@ -146,37 +180,21 @@ function DayCell({
               className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1"
             >
               {isExpanded ? (
-                <>
-                  Show less <ChevronUp size={14} />
-                </>
+                <>Show less <ChevronUp size={14} /></>
               ) : (
-                <>
-                  +{hiddenCount} <ChevronDown size={14} />
-                </>
+                <>+{hiddenCount} <ChevronDown size={14} /></>
               )}
             </button>
           )}
         </div>
 
-        {/* Shipments container */}
         <div className="mt-1 ml-2 flex-1 space-y-1 overflow-hidden">
-          <AnimatePresence>
-            {visibleShipments.map((s) => (
-              <motion.div
-                key={s._id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-                layout
-              >
-                <ShipmentCard shipment={s} canDrag={canDrag} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          {visibleShipments.map((s) => (
+            <ShipmentCard key={s._id} shipment={s} canDrag={canDrag} />
+          ))}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -190,48 +208,46 @@ function ShipmentCard({ shipment, canDrag }) {
 
   const time = format(parseISO(shipment.delivery_date), "HH:mm");
 
-  // Default (TBD / unknown / Not Received fallback)
   let colors = {
-    bg: "bg-[#0088F6]",           // your primary blue
-    border: "border-blue-700/40",  // darker subtle border to match
-    text: "text-white",            // white text for contrast on dark bg
-    time: "text-blue-100/90",      // light blue tint for time
+    bg: "bg-[#0088F6]",
+    border: "border-blue-700/40",
+    text: "text-white",
+    time: "text-blue-100/90",
   };
 
   if (shipment.status === "Received") {
     colors = {
-      bg: "bg-[#198754]",          // bootstrap-like success green
+      bg: "bg-[#198754]",
       border: "border-green-700/40",
       text: "text-white",
       time: "text-green-100/90",
     };
   } else if (shipment.status === "Not Received") {
     colors = {
-      bg: "bg-[#0088F6]",         // same blue as default, or change if you want
+      bg: "bg-[#0088F6]",
       border: "border-blue-700/40",
       text: "text-white",
       time: "text-blue-100/90",
     };
   } else if (shipment.status === "Delay") {
     colors = {
-      bg: "bg-[#fd7e14]",         // strong orange for warning/delay
+      bg: "bg-[#fd7e14]",
       border: "border-orange-800/40",
       text: "text-white",
       time: "text-orange-100/90",
     };
   } else if (shipment.status === "TBD") {
     colors = {
-      bg: "bg-[#6f42c1]",         // purple-ish for TBD (or keep blue)
+      bg: "bg-[#6f42c1]",
       border: "border-purple-700/40",
       text: "text-white",
       time: "text-purple-100/90",
     };
   }
 
-  // missed_delivery has highest priority (red override)
   if (shipment.missed_delivery) {
     colors = {
-      bg: "bg-[#dc3545]",         // strong red
+      bg: "bg-[#dc3545]",
       border: "border-red-700/40",
       text: "text-white",
       time: "text-red-100/90",
